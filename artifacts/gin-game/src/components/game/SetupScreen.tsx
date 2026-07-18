@@ -44,19 +44,21 @@ export function SetupScreen({
     }
     setLoading(true);
     try {
-      // Start in wildpick phase — Noah picks wild first round 1
+      // Room creator picks the wild and plays first
       const initial = getInitialSession();
       const newSession: SessionState = {
         ...initial,
         totalRounds: parseInt(rounds, 10),
-        wildPickerThisRound: 'Noah',
+        wildPickerThisRound: localIdentity,
+        turn: localIdentity,
         status: 'wildpick',
       };
       const code = await createRoom(newSession);
       setRoomCode(code);
       onDeal({
         totalRounds: parseInt(rounds, 10),
-        wildPickerThisRound: 'Noah',
+        wildPickerThisRound: localIdentity,
+        turn: localIdentity,
         status: 'wildpick',
       });
       toast({ title: `Room created! Code: ${code}`, description: 'Share this code with your opponent.' });
@@ -170,7 +172,7 @@ export function SetupScreen({
               <div className="bg-secondary/30 rounded-xl p-4 border border-border text-sm text-muted-foreground space-y-1">
                 <p className="text-foreground font-semibold text-sm">How wilds work</p>
                 <p>Before each round one player picks any rank as the wild. Wild cards act as jokers — they fill any spot in any meld.</p>
-                <p className="mt-1">Noah picks first (Round 1), then you alternate.</p>
+                <p className="mt-1">Whoever creates the room picks first (Round 1), then you alternate.</p>
               </div>
 
               <Button
