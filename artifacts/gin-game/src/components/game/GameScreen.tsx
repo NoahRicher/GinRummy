@@ -97,6 +97,21 @@ export function GameScreen({ session, localIdentity, onAction, onReorder, roomCo
     if (!isMyTurn || !session.hasDrawn || selectedCardIndex === null) return;
     const discarded = myHand[selectedCardIndex];
     const newHand = myHand.filter((_, i) => i !== selectedCardIndex);
+
+    // Auto-gin: if all 7 remaining cards are melded, declare gin immediately
+    const postDiscardMelds = evaluateHandForMeldStatus(newHand, wild);
+    if (postDiscardMelds.every(Boolean)) {
+      onAction({
+        discardPile: [...session.discardPile, discarded],
+        [handKey]: newHand,
+        hasDrawn: false,
+        status: 'scoring',
+        roundWinner: localIdentity,
+        log: [`✨ ${localIdentity} declared GIN! ✨`, ...session.log].slice(0, 50),
+      });
+      return;
+    }
+
     const nextTurn: PlayerName = localIdentity === 'Noah' ? 'Amelia' : 'Noah';
     onAction({
       discardPile: [...session.discardPile, discarded],
