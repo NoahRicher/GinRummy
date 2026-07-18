@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noah & Amelia's Custom Gin</title>
+    <style>
+        :root {
+            --bg-color: #1e1e24;
+            --card-bg: #2a2a35;
+            --text-main: #f5f5fa;
+            --text-muted: #a0a0b0;
+            --accent: #3498db;
+            --wild-glow: 0 0 12px #f1c40f;
+            --meld-glow: 0 0 12px #2ecc71;
+            --red-card: #e74c3c;
+            --black-card: #ecf0f1;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 15px;
+            max-width: 500px;
+            margin: 0 auto;
+            padding-bottom: 60px;
+        }
+        h1, h2, h3 { text-align: center; margin-bottom: 10px; color: #fff; }
+        .view-panel { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.3); margin-bottom: 20px; }
+        .hidden { display: none !important; }
+        
+        label { font-weight: bold; display: block; margin-top: 15px; color: var(--text-muted); font-size: 14px; }
+        input, select, button, textarea { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #444; border-radius: 8px; font-size: 16px; background: #15151a; color: #fff; }
+        button { background: var(--accent); border: none; font-weight: bold; cursor: pointer; transition: background 0.2s; margin-top: 15px; }
+        button:hover { background: #2980b9; }
+        .btn-secondary { background: #555; }
+        .btn-secondary:hover { background: #666; }
+        .btn-success { background: #2ecc71; }
+        .btn-success:hover { background: #27ae60; }
+        
+        .score-board { display: flex; justify-content: space-between; background: #15151a; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #333; }
+        .score-box { text-align: center; flex: 1; }
+        .score-box:first-child { border-right: 1px solid #333; }
+        .score-num { font-size: 24px; font-weight: bold; color: #fff; }
+        .meta-info { text-align: center; font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.4; }
+
+        .pile-zone { display: flex; justify-content: center; gap: 25px; margin: 20px 0; }
+        .deck-pile, .discard-pile { text-align: center; }
+        .pile-label { font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: bold; text-transform: uppercase; }
+
+        /* Card Graphics */
+        .card-sprite {
+            width: 75px; height: 110px;
+            background: #fff; border-radius: 6px;
+            display: inline-flex; flex-direction: column; justify-content: space-between;
+            padding: 8px; font-weight: bold; font-size: 18px; position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4); user-select: none; transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card-sprite .suit-icon { font-size: 22px; align-self: flex-end; }
+        .card-sprite.red-suit { color: var(--red-card); }
+        .card-sprite.black-suit { color: #1e1e24; }
+        .card-sprite.back {
+            background: linear-gradient(135deg, #7f8c8d 25%, #95a5a6 25%, #95a5a6 50%, #7f8c8d 50%, #7f8c8d 75%, #95a5a6 75%, #95a5a6);
+            background-size: 20px 20px; border: 2px solid #fff;
+        }
+        .card-sprite.selectable { cursor: pointer; }
+        .card-sprite.selected { transform: translateY(-15px); box-shadow: 0 10px 20px rgba(0,0,0,0.5); border: 3px solid var(--accent); }
+        .card-sprite.wild-card { box-shadow: var(--wild-glow); border: 2px solid #f1c40f; }
+        .card-sprite.melded-card { box-shadow: var(--meld-glow); border: 2px solid #2ecc71; }
+        
+        .hand-container { display: flex; justify-content: center; gap: 8px; min-height: 130px; padding-top: 15px; overflow-x: auto; width: 100%; }
+        
+        textarea { font-family: monospace; height: 80px; font-size: 12px; resize: none; }
+        .log-display { font-size: 12px; background: #15151a; border-radius: 6px; padding: 10px; max-height: 80px; overflow-y: auto; white-space: pre-wrap; color: var(--text-muted); border: 1px solid #333; }
+        .toggle-card { margin: 5px; }
+        .scoring-list { display: flex; flex-direction: column; gap: 8px; margin: 15px 0; }
+        .scoring-item { display: flex; justify-content: space-between; background: #15151a; padding: 10px; border-radius: 6px; align-items: center; }
+    </style>
+</head>
+<body>
+
+    <h1>🃏 SMS Gin Rummy</h1>
+
+    <!-- VIEW 1: INITIAL MATCH SETUP -->
+    <div id="view-setup" class="view-panel">
+        <h2>Match Initialization</h2>
+        <label>Identify Yourself:</label>
+        
+            <option value="Noah">I am Noah</option>
+            <option value="Amelia">I am Amelia</option>
+        </select>
+        
+        <label>Total Game Rounds:</label>
+        <input type="number" id="setup-rounds" value="3" min="1">
+        
+        <label>Noah's Custom Wild Card Rank:</label>
+        <select id="setup-noah-wild"></select>
+        
+        <label>Amelia's Custom Wild Card Rank:</label>
+        <select id="setup-amelia-wild"></select>
+        
+        <button onclick="initiateMatch()" class="btn-success">Generate Match & Deal First Hand</button>
+        
+        <div style="border-top: 1px solid #444; margin-top: 20px; padding-top: 15px;">
+            <h3>Or Paste Friend's Invitation / Turn</h3>
+            <textarea id="paste-box" placeholder="Paste the encrypted text string received from your friend here..."></textarea>
+            <button onclick="unpackIncomingTurn()">Sync Game State</button>
+        </div>
+    </div>
+
+    <!-- VIEW 2: ACTIVE GAMEPLAY ENGINE -->
+    <div id="view-game" class="view-panel hidden">
+        <h2 id="display-round-title">Round 1 of 3</h2>
+        <div class="meta-info">
+            <b>Noah's Wild:</b> <span id="lbl-n-wild" style="color:#f1c40f"></span> | 
+            <b>Amelia's Wild:</b> <span id="lbl-a-wild" style="color:#f1c40f"></span><br>
+            <span id="display-turn-prompt" style="color:#e74c3c; font-weight:bold; font-size:15px;"></span>
+        </div>
+
+        <div class="score-board">
+            <div class="score-box">
+                <div>Noah Total</div>
+                <div class="score-num" id="board-score-noah">0</div>
+            </div>
+            <div class="score-box">
+                <div>Amelia Total</div>
+                <div class="score-num" id="board-score-amelia">0</div>
+            </div>
+        </div>
+
+        <!-- BOARD PILES -->
+        <div class="pile-zone">
+            <div class="deck-pile">
+                <div class="pile-label">Stock</div>
+                <div class="card-sprite back selectable" id="deck-clickable" onclick="executeDraw('stock')"></div>
+            </div>
+            <div class="discard-pile">
+                <div class="pile-label">Discard</div>
+                <div id="discard-render-zone"></div>
+            </div>
+        </div>
+
+        <!-- PLAYER HAND -->
+        <h3 style="font-size:14px; text-align:left; color:var(--text-muted)">Your Auto-Sorted Hand:</h3>
+        <div class="hand-container" id="player-hand-zone"></div>
+
+        <!-- GAMEPLAY BUTTON ACTIONS -->
+        <div id="action-controls" style="margin-top:10px;">
+            <button id="btn-discard" onclick="executeDiscard()" class="btn-secondary" disabled>Select Card to Discard</button>
+            <button id="btn-gin" onclick="checkAndExecuteGin()" class="btn-success hidden">Declare Perfect GIN!</button>
+        </div>
+
+        <!-- SMS SYNC BOX -->
+        <div style="border-top:1px solid #444; margin-top:20px; padding-top:15px;">
+            <h3>SMS Synchronization Data</h3>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:5px;">Copy the payload block below and text it to your friend:</p>
+            <textarea id="copy-box" readonly onclick="this.select()"></textarea>
+            <button onclick="copyToClipboard()" class="btn-secondary">📋 Copy Sync Text</button>
+            
+            <label style="margin-top:15px;">Received a turn response back? Paste it below:</label>
+            <textarea id="live-paste-box" placeholder="Paste incoming string here..." oninput="unpackLiveTurn()"></textarea>
+        </div>
+
+        <div style="margin-top:15px;">
+            <h4 style="font-size:12px; color:var(--text-muted)">Match Log:</h4>
+            <div id="match-log" class="log-display"></div>
+        </div>
+        <button onclick="wipeData()" style="font-size:11px; padding:4px; margin-top:15px; background:#c0392b;">Emergency Wipe Match Data</button>
+    </div>
+
+    <!-- VIEW 3: SCORING CALCULATION PHASE -->
+    <div id="view-scoring" class="view-panel hidden">
+        <h2>Round Finished! Scoring Phase</h2>
+        <p id="scoring-declaration" style="text-align:center; color:#2ecc71; font-weight:bold; margin-bottom:15px;"></p>
+        <p style="font-size:13px; color:var(--text-muted); text-align:center; margin-bottom:15px;">
+            The person who got Gin scores 0. <b>Loser:</b> Tap or select only the cards that were successfully built into melds to safe them. Any unselected deadwood cards calculate penalty points (Ace=15, Face=10, Num=5).
+        </p>
+        
+        <h3 id="loser-hand-title">Loser's Hand Configuration:</h3>
+        <div class="hand-container" id="loser-scoring-hand"></div>
+
+        <div class="score-board" style="margin-top:20px;">
+            <div class="score-box">
+                <div>Noah's Deadwood Penalty</div>
+                <div class="score-num" id="calc-noah-penalty">0</div>
+            </div>
+            <div class="score-box">
+                <div>Amelia's Deadwood Penalty</div>
+Use code with caution.
+
+0
+
+Apply Scores & Proceed
+🏆 Match Terminated
+
+
+Noah Final
+0
+
+
+Amelia Final
+0
+
+
+
+Highest point value lost the match.
+Start Fresh Match
+const SUITS = [
+{ name: 'Spades', icon: '♠', isRed: false, order: 0 },
+{ name: 'Hearts', icon: '♥', isRed: true, order: 1 },
+{ name: 'Diamonds', icon: '♦', isRed: true, order: 2 },
+{ name: 'Clubs', icon: '♣', isRed: false, order: 3 }
+];
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const RANK_VALUES = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
+let localIdentity = "";
+let selectedHandCardIndex = null;
+let session = {
+totalRounds: 3,
+currentRound: 1,
+noahWild: '2',
+ameliaWild: '2',
+noahScore: 0,
+ameliaScore: 0,
+turn: 'Noah',
+hasDrawn: false,
+deck: [],
+discardPile: [],
+noahHand: [],
+ameliaHand: [],
+status: 'setup', // setup, active, scoring, gameover
+log: [],
+roundWinner: "",
+loserMeldIndices: []
+};
+// Populate Wild Card Select Dropdowns on Boot
+window.onload = function() {
+const dropdowns = ['setup-noah-wild', 'setup-amelia-wild'];
+dropdowns.forEach(id => {
+const select = document.getElementById(id);
+RANKS.forEach(r => {
+let opt = document.createElement('option');
+opt.value = r; opt.innerText = r + "s";
+if(r === '2') opt.selected = true;
+select.appendChild(opt);
+});
+});
+// Check for existing saved states inside Local Browser Memory Cache
+const cached = localStorage.getItem("sms_gin_engine_save");
+localIdentity = localStorage.getItem("sms_gin_engine_identity") || "";
+if (cached) {
+session = JSON.parse(cached);
+if(localIdentity) document.getElementById('setup-identity').value = localIdentity;
+refreshUIState();
+}
+};
+function makeDeck() {
+let deck = [];
+SUITS.forEach(s => {
+RANKS.forEach(r => {
+deck.push({ rank: r, suit: s.name, icon: s.icon, isRed: s.isRed, suitOrder: s.order });
+});
+});
+return deck;
+}
+function shuffle(deck) {
+for (let i = deck.length - 1; i > 0; i--) {
+const j = Math.floor(Math.random() * (i + 1));
+[deck[i], deck[j]] = [deck[j], deck[i]];
+}
+return deck;
+}
+function getCardSortWeight(card, wildRank) {
+if (card.rank === wildRank) return -100; // Force Wilds to front
+return (card.suitOrder * 20) + RANK_VALUES[card.rank];
+}
+function sortHand(hand, wildRank) {
+return hand.sort((a, b) => getCardSortWeight(a, wildRank) - getCardSortWeight(b, wildRank));
+}
+function initiateMatch() {
+localIdentity = document.getElementById('setup-identity').value;
+localStorage.setItem("sms_gin_engine_identity", localIdentity);
+session.totalRounds = parseInt(document.getElementById('setup-rounds').value) || 3;
+session.noahWild = document.getElementById('setup-noah-wild').value;
+session.ameliaWild = document.getElementById('setup-amelia-wild').value;
+session.noahScore = 0;
+session.ameliaScore = 0;
+session.currentRound = 1;
+session.log = ["Match configuration established."];
+dealCurrentRound();
+}
+function dealCurrentRound() {
+let freshDeck = shuffle(makeDeck());
+session.noahHand = [];
+session.ameliaHand = [];
+// Deal exactly 7 cards to each person
+for(let i=0; i<7; i++) {
+session.noahHand.push(freshDeck.pop());
+session.ameliaHand.push(freshDeck.pop());
+}
+session.discardPile = [freshDeck.pop()];
+session.deck = freshDeck;
+session.turn = "Noah";
+session.hasDrawn = false;
+session.status = "active";
+session.log.push("Round " + session.currentRound + " cards dealt. Noah's turn.");
+sortBothHands();
+saveAndRefresh();
+}
+function sortBothHands() {
+session.noahHand = sortHand(session.noahHand, session.noahWild);
+session.ameliaHand = sortHand(session.ameliaHand, session.ameliaWild);
+}
+function saveAndRefresh() {
+localStorage.setItem("sms_gin_engine_save", JSON.stringify(session));
+refreshUIState();
+}
+function wipeData() {
+if(confirm("Wipe all locally cached engine game states?")) {
+localStorage.removeItem("sms_gin_engine_save");
+session = { totalRounds: 3, currentRound: 1, noahWild: '2', ameliaWild: '2', noahScore: 0, ameliaScore: 0, turn: 'Noah', hasDrawn: false, deck: [], discardPile: [], noahHand: [], ameliaHand: [], status: 'setup', log: [], roundWinner: "", loserMeldIndices: [] };
+refreshUIState();
+}
+}
+/*
+=========================================
+MELD ALGORITHM RULES ENGINE WITH WILDS
+=========================================
+*/
+function evaluateHandForMeldStatus(hand, wildRank) {
+let meldedFlags = new Array(hand.length).fill(false);
+let normalCards = [];
+let wildCount = 0;
+hand.forEach((card, idx) => {
+if (card.rank === wildRank) {
+wildCount++;
+} else {
+normalCards.push({ card, originalIndex: idx });
+}
+});
+// If player stockpiled an extreme collection of wild cards, they form a baseline natural set
+if (wildCount >= 3) {
+hand.forEach((card, idx) => {
+if (card.rank === wildRank) meldedFlags[idx] = true;
+});
+}
+// Power Set helper logic to scan combinations of unmatched configurations
+let runGroups = findValidRunGroupings(normalCards);
+let setGroups = findValidSetGroupings(normalCards);
+let totalCombinations = [...runGroups, ...setGroups];
+// Evaluate optimal matching groups to capture maximum validation structures
+totalCombinations.sort((a,b) => b.matchedNormalCount - a.matchedNormalCount);
+let remainingWilds = wildCount;
+totalCombinations.forEach(combo => {
+if (combo.wildsNeeded <= remainingWilds) {
+// Confirm conflict flags
+let collision = false;
+combo.indexes.forEach(idx => { if(meldedFlags[idx]) collision = true; });
+if (!collision) {
+combo.indexes.forEach(idx => { meldedFlags[idx] = true; });
+remainingWilds -= combo.wildsNeeded;
+}
+}
+});
+// Assign remaining wilds to pre-existing melds if left unassigned
+if (remainingWilds > 0) {
+hand.forEach((card, idx) => {
+if (card.rank === wildRank && remainingWilds > 0 && !meldedFlags[idx]) {
+meldedFlags[idx] = true;
+remainingWilds--;
+}
+});
+}
+return meldedFlags;
+}
+function findValidSetGroupings(normalItems) {
+let groups = {};
+normalItems.forEach(item => {
+if(!groups[item.card.rank]) groups[item.card.rank] = [];
+groups[item.card.rank].push(item.originalIndex);
+});
+let validScaffolds = [];
+for (let rank in groups) {
+let idxs = groups[rank];
+if (idxs.length >= 3) {
+validScaffolds.push({ indexes: idxs, wildsNeeded: 0, matchedNormalCount: idxs.length });
+} else if (idxs.length === 2) {
+validScaffolds.push({ indexes: idxs, wildsNeeded: 1, matchedNormalCount: 2 });
+} else if (idxs.length === 1) {
+validScaffolds.push({ indexes: idxs, wildsNeeded: 2, matchedNormalCount: 1 });
+}
+}
+return validScaffolds;
+}
+function findValidRunGroupings(normalItems) {
+let suitBuckets = {}, scaffolds = [];
+normalItems.forEach(item => {
+if(!suitBuckets[item.card.suit]) suitBuckets[item.card.suit] = [];
+suitBuckets[item.card.suit].push(item);
+});
+for (let suit in suitBuckets) {
+let items = suitBuckets[suit].sort((a,b) => RANK_VALUES[a.card.rank] - RANK_VALUES[b.card.rank]);
+// Scan run possibilities from window gaps
+for (let i = 0; i < items.length; i++) {
+for (let j = i; j < items.length; j++) {
+let subSlice = items.slice(i, j + 1);
+let span = RANK_VALUES[subSlice[subSlice.length-1].card.rank] - RANK_VALUES[subSlice[0].card.rank] + 1;
+let missingCount = span - subSlice.length;
+let lengthWithWilds = span;
+if (lengthWithWilds < 3) {
+let addedWildsNeeded = 3 - lengthWithWilds;
+let totalWilds = missingCount + addedWildsNeeded;
+scaffolds.push({ indexes: subSlice.map(x=>x.originalIndex), wildsNeeded: totalWilds, matchedNormalCount: subSlice.length });
+} else if (missingCount <= 4) {
+scaffolds.push({ indexes: subSlice.map(x=>x.originalIndex), wildsNeeded: missingCount, matchedNormalCount: subSlice.length });
+}
+}
+}
+}
+return scaffolds;
+}
+/*
+=========================================
+UI DRAW RENDERING PIPELINES
+=========================================
+*/
+function refreshUIState() {
+// View Switching Matrix Routing Elements
+document.getElementById('view-setup').classList.add('hidden');
+document.getElementById('view-game').classList.add('hidden');
+document.getElementById('view-scoring').classList.add('hidden');
+document.getElementById('view-gameover').classList.add('hidden');
+if (session.status === 'setup') {
+document.getElementById('view-setup').classList.remove('hidden');
+return;
+}
+if (session.status === 'scoring') {
+document.getElementById('view-scoring').classList.remove('hidden');
+renderScoringViewPanel();
+return;
+}
+if (session.status === 'gameover') {
+document.getElementById('view-gameover').classList.remove('hidden');
+document.getElementById('final-noah').innerText = session.noahScore + " pts";
+document.getElementById('final-amelia').innerText = session.ameliaScore + " pts";
+let msg = "";
+if(session.noahScore > session.ameliaScore) msg = "Noah has the most points and LOSES the match! 😢";
+else if(session.ameliaScore > session.noahScore) msg = "Amelia has the most points and LOSES the match! 😢";
+else msg = "Exact mathematical tie score! 🤝";
+document.getElementById('final-loser-display').innerText = msg;
+return;
+}
+// Fallthrough standard default: Game Play Screen Visible Frame Layout
+document.getElementById('view-game').classList.remove('hidden');
+document.getElementById('display-round-title').innerText = "Round " + session.currentRound + " of " + session.totalRounds;
+document.getElementById('lbl-n-wild').innerText = session.noahWild + "s";
+document.getElementById('lbl-a-wild').innerText = session.ameliaWild + "s";
+document.getElementById('board-score-noah').innerText = session.noahScore;
+document.getElementById('board-score-amelia').innerText = session.ameliaScore;
+document.getElementById('match-log').innerText = session.log.slice().reverse().join("\n");
+let isMyTurn = (session.turn === localIdentity);
+document.getElementById('display-turn-prompt').innerText = isMyTurn ? "YOUR TURN - Make your move!" : "Waiting on " + session.turn + "'s move transmission...";
+// Render top discard zone card graphic
+const discardZone = document.getElementById('discard-render-zone');
+discardZone.innerHTML = "";
+if (session.discardPile.length > 0) {
+let topDiscard = session.discardPile[session.discardPile.length - 1];
+let cardEl = buildCardDomElement(topDiscard, false, false);
+if (isMyTurn && !session.hasDrawn) {
+cardEl.classList.add('selectable');
+cardEl.onclick = function() { executeDraw('discard'); };
+}
+discardZone.appendChild(cardEl);
+} else {
+discardZone.innerHTML = "Empty";
+}
+// Render Current Client Player Hand Elements Visualizer
+const handZone = document.getElementById('player-hand-zone');
+handZone.innerHTML = "";
+let activeHand = (localIdentity === 'Noah') ? session.noahHand : session.ameliaHand;
+let activeWild = (localIdentity === 'Noah') ? session.noahWild : session.ameliaWild;
+// Generate visual helper colors dynamically using the rules validation calculation loop
+let meldHighlightFlags = evaluateHandForMeldStatus(activeHand, activeWild);
+activeHand.forEach((card, idx) => {
+let isWild = (card.rank === activeWild);
+let isMelded = meldHighlightFlags[idx];
+let isSelected = (selectedHandCardIndex === idx);
+let cardDom = buildCardDomElement(card, isWild, isMelded);
+if (isMyTurn && session.hasDrawn) {
+cardDom.classList.add('selectable');
+if(isSelected) cardDom.classList.add('selected');
+cardDom.onclick = function() {
+selectedHandCardIndex = (selectedHandCardIndex === idx) ? null : idx;
+refreshUIState();
+};
+}
+handZone.appendChild(cardDom);
+});
+// Enable or disable functional action control buttons safely
+let btnDiscard = document.getElementById('btn-discard');
+if (isMyTurn && session.hasDrawn && selectedHandCardIndex !== null) {
+btnDiscard.disabled = false;
+btnDiscard.innerText = "Discard Selected Card";
+btnDiscard.className = "btn-success";
+} else {
+btnDiscard.disabled = true;
+btnDiscard.innerText = session.hasDrawn ? "Select Card to Discard" : "Draw a Card First";
+btnDiscard.className = "btn-secondary";
+}
+// GIN Verification Check evaluation scan logic engine flag toggle
+let btnGin = document.getElementById('btn-gin');
+if (isMyTurn && session.hasDrawn) {
+// If ALL 8 cards currently in hand form an absolute seamless set of valid melds, display Gin activation button choice
+let countMeldTrue = meldHighlightFlags.filter(v => v === true).length;
+if (countMeldTrue === activeHand.length) {
+btnGin.classList.remove('hidden');
+} else {
+btnGin.classList.add('hidden');
+}
+} else {
+btnGin.classList.add('hidden');
+}
+// Build synchronized compressed text string token payload string block
+let encrypted = btoa(JSON.stringify(session));
+document.getElementById('copy-box').value = "GIN_DATA:" + encrypted;
+}
+function buildCardDomElement(card, isWild, isMelded) {
+let el = document.createElement('div');
+el.className = "card-sprite " + (card.isRed ? "red-suit" : "black-suit");
+if (isWild) el.classList.add('wild-card');
+if (isMelded && !isWild) el.classList.add('melded-card');
+el.innerHTML = <div>${card.rank}</div><div class="suit-icon">${card.icon}</div>;
+return el;
+}
+/*
+=========================================
+GAMEPLAY ENGINE COMMAND INTERFACES
+=========================================
+*/
+function executeDraw(source) {
+if(session.turn !== localIdentity || session.hasDrawn) return;
+let currentHand = (localIdentity === 'Noah') ? session.noahHand : session.ameliaHand;
+let currentWild = (localIdentity === 'Noah') ? session.noahWild : session.ameliaWild;
+let drawnCard = null;
+if (source === 'stock') {
+if(session.deck.length === 0) {
+// Recycle discard pile automatically if stock runs dry mid game
+let top = session.discardPile.pop();
+session.deck = shuffle(session.discardPile);
+session.discardPile = [top];
+session.log.push("Stock pile exhausted. Recycled discard pile.");
+}
+drawnCard = session.deck.pop();
+session.log.push(localIdentity + " drew a secret card from the Stock Pile.");
+} else {
+drawnCard = session.discardPile.pop();
+session.log.push(localIdentity + " grabbed the face-up " + drawnCard.rank + " of " + drawnCard.suit + " from the Discard Pile.");
+}
+currentHand.push(drawnCard);
+sortHand(currentHand, currentWild);
+session.hasDrawn = true;
+selectedHandCardIndex = null;
+saveAndRefresh();
+}
+function executeDiscard() {
+if(session.turn !== localIdentity || !session.hasDrawn || selectedHandCardIndex === null) return;
+let currentHand = (localIdentity === 'Noah') ? session.noahHand : session.ameliaHand;
+let discardedCard = currentHand.splice(selectedHandCardIndex, 1)[0];
+session.discardPile.push(discardedCard);
+session.log.push(localIdentity + " discarded the " + discardedCard.rank + " of " + discardedCard.suit + ".");
+// Swap turns smoothly over data packets
+session.turn = (localIdentity === 'Noah') ? 'Amelia' : 'Noah';
+session.hasDrawn = false;
+selectedHandCardIndex = null;
+saveAndRefresh();
+}
+function checkAndExecuteGin() {
+if(session.turn !== localIdentity || !session.hasDrawn) return;
+session.roundWinner = localIdentity;
+session.status = "scoring";
+session.loserMeldIndices = []; // reset safe selections
+session.log.push("✨ GIN! " + localIdentity + " has ended Round " + session.currentRound + " with a perfect hand!");
+saveAndRefresh();
+}
+/*
+=========================================
+SCORING SYSTEM RULES VALIDATION CONTROLLER
+=========================================
+*/
+function renderScoringViewPanel() {
+document.getElementById('scoring-declaration').innerText = "✨ " + session.roundWinner + " Declared GIN! ✨";
+let loserName = (session.roundWinner === 'Noah') ? 'Amelia' : 'Noah';
+document.getElementById('loser-hand-title').innerText = loserName + "'s (" + (loserName==='Noah'?session.noahWild:session.ameliaWild) + "s Wild) Hand Configuration Setup:";
+let loserHand = (session.roundWinner === 'Noah') ? session.ameliaHand : session.noahHand;
+let container = document.getElementById('loser-scoring-hand');
+container.innerHTML = "";
+loserHand.forEach((card, idx) => {
+let cardDom = buildCardDomElement(card, false, false);
+cardDom.classList.add('selectable');
+// If marked safe inside melds array index collection, make it change color to green
+if(session.loserMeldIndices.includes(idx)) {
+cardDom.classList.add('melded-card');
+}
+cardDom.onclick = function() {
+let position = session.loserMeldIndices.indexOf(idx);
+if(position > -1) {
+session.loserMeldIndices.splice(position, 1);
+} else {
+session.loserMeldIndices.push(idx);
+}
+calculateRunningDeadwoodPoints();
+};
+container.appendChild(cardDom);
+});
+calculateRunningDeadwoodPoints();
+}
+function calculateRunningDeadwoodPoints() {
+let loserHand = (session.roundWinner === 'Noah') ? session.ameliaHand : session.noahHand;
+let deadwoodTotal = 0;
+loserHand.forEach((card, idx) => {
+// If card does NOT fit into a custom marked user safe melds selection, assess custom penalty points
+if(!session.loserMeldIndices.includes(idx)) {
+if (card.rank === 'A') {
+deadwoodTotal += 15;
+} else if (['J','Q','K'].includes(card.rank)) {
+deadwoodTotal += 10;
+} else {
+deadwoodTotal += 5;
+}
+}
+});
+if(session.roundWinner === 'Noah') {
+document.getElementById('calc-noah-penalty').innerText = "0";
+document.getElementById('calc-amelia-penalty').innerText = deadwoodTotal;
+} else {
+document.getElementById('calc-noah-penalty').innerText = deadwoodTotal;
+document.getElementById('calc-amelia-penalty').innerText = "0";
+}
+}
+function commitRoundScoresAndAdvance() {
+let loserHand = (session.roundWinner === 'Noah') ? session.ameliaHand : session.noahHand;
+let deadwoodTotal = 0;
+loserHand.forEach((card, idx) => {
+if(!session.loserMeldIndices.includes(idx)) {
+if (card.rank === 'A') deadwoodTotal += 15;
+else if (['J','Q','K'].includes(card.rank)) deadwoodTotal += 10;
+else deadwoodTotal += 5;
+}
+});
+if(session.roundWinner === 'Noah') {
+session.ameliaScore += deadwoodTotal;
+session.log.push("Scoring R" + session.currentRound + ": Amelia caught with " + deadwoodTotal + " penalty points.");
+} else {
+session.noahScore += deadwoodTotal;
+session.log.push("Scoring R" + session.currentRound + ": Noah caught with " + deadwoodTotal + " penalty points.");
+}
+// Check if final matching limits have been reached
+if(session.currentRound >= session.totalRounds) {
+session.status = "gameover";
+session.log.push("Match completed.");
+} else {
+session.currentRound++;
+session.status = "active";
+dealCurrentRound();
+return;
+}
+saveAndRefresh();
+}
+/*
+=========================================
+CROSS DISTANCE SMS TEXT DATA SYNC DECRYPTORS
+=========================================
+*/
+function copyToClipboard() {
+let copyText = document.getElementById("copy-box");
+copyText.select();
+copyText.setSelectionRange(0, 99999);
+navigator.clipboard.writeText(copyText.value);
+alert("Turn sync text payload successfully copied to clipboard! Paste it inside your text message thread to your friend.");
+}
+function unpackIncomingTurn() {
+let payload = document.getElementById('paste-box').value;
+processTextStreamDecompression(payload);
+}
+function unpackLiveTurn() {
+let payload = document.getElementById('live-paste-box').value;
+if(payload.includes("GIN_DATA:")) {
+processTextStreamDecompression(payload);
+document.getElementById('live-paste-box').value = "";
+}
+}
+function processTextStreamDecompression(rawInput) {
+if(!rawInput.includes("GIN_DATA:")) {
+alert("Invalid sync data string format detected.");
+return;
+}
+try {
+let cleanBase64 = rawInput.split("GIN_DATA:")[1].trim();
+let decodedObject = JSON.parse(atob(cleanBase64));
+if(decodedObject && typeof decodedObject.noahScore === 'number') {
+session = decodedObject;
+localIdentity = document.getElementById('setup-identity').value;
+localStorage.setItem("sms_gin_engine_identity", localIdentity);
+selectedHandCardIndex = null;
+localStorage.setItem("sms_gin_engine_save", JSON.stringify(session));
+refreshUIState();
+alert("Sync successful! Game board state updated.");
+}
+} catch (err) {
+alert("Critical error parsing sync token sequence string payload structure.");
+}
+}

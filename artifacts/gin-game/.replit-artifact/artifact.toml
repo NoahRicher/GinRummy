@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Noah & Amelia's Gin"
+version = "1.0.0"
+id = "artifacts/gin-game"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24942
+
+[services.development]
+run = "pnpm --filter @workspace/gin-game run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/gin-game", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/gin-game/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24942"
+BASE_PATH = "/"
