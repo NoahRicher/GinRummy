@@ -41,6 +41,20 @@ export const getRankValue = (rank: string) => {
   return parseInt(rank, 10);
 };
 
+/**
+ * Rank value for wrap-around run detection (K-A-2 style).
+ * A=14, 2=15, …, 9=22; 10/J/Q/K keep their normal values.
+ * Runs crossing the K→A boundary become contiguous in this mapping.
+ */
+const getWrapRankValue = (rank: string): number => {
+  if (rank === 'A') return 14;
+  if (rank === 'J') return 11;
+  if (rank === 'Q') return 12;
+  if (rank === 'K') return 13;
+  const v = parseInt(rank, 10);
+  return v <= 9 ? v + 13 : v; // 2→15, 3→16, …, 9→22; 10 stays 10
+};
+
 export const getDeadwoodValue = (rank: string) => {
   if (rank === 'A') return 15;
   if (['J', 'Q', 'K'].includes(rank)) return 10;
@@ -123,6 +137,7 @@ export function evaluateHandForMeldStatus(hand: Card[], wildRank: string): boole
     suitGroups.get(c.card.suit)!.push(c);
   }
   for (const group of Array.from(suitGroups.values())) {
+    // Pass 1: standard order (A=1 low) — catches A-2-3, 2-3-4, …, J-Q-K
     group.sort((a, b) => getRankValue(a.card.rank) - getRankValue(b.card.rank));
     for (let i = 0; i < group.length; i++) {
       for (let j = i; j < group.length; j++) {
@@ -130,6 +145,24 @@ export function evaluateHandForMeldStatus(hand: Card[], wildRank: string): boole
         const first = window[0].card;
         const last = window[window.length - 1].card;
         const span = getRankValue(last.rank) - getRankValue(first.rank) + 1;
+        const missingCount = span - window.length;
+        const wildsNeeded = span < 3 ? missingCount + (3 - span) : missingCount;
+        if (missingCount <= 4) {
+          scaffolds.push({ indices: window.map(c => c.index), wildsNeeded, matchedNormalCount: window.length });
+        }
+      }
+    }
+
+    // Pass 2: wrap-around order (A=14, 2=15, …, 9=22) — catches Q-K-A, K-A-2, K-A-2-3, etc.
+    // Only windows that actually cross the K→A boundary (minWrap ≤ 13 AND maxWrap ≥ 14).
+    const wrapGroup = [...group].sort((a, b) => getWrapRankValue(a.card.rank) - getWrapRankValue(b.card.rank));
+    for (let i = 0; i < wrapGroup.length; i++) {
+      for (let j = i; j < wrapGroup.length; j++) {
+        const window = wrapGroup.slice(i, j + 1);
+        const minWrap = getWrapRankValue(window[0].card.rank);
+        const maxWrap = getWrapRankValue(window[window.length - 1].card.rank);
+        if (minWrap > 13 || maxWrap < 14) continue; // doesn't cross K→A boundary
+        const span = maxWrap - minWrap + 1;
         const missingCount = span - window.length;
         const wildsNeeded = span < 3 ? missingCount + (3 - span) : missingCount;
         if (missingCount <= 4) {
