@@ -116,7 +116,7 @@ export function SetupScreen({
       >
         {/* Header */}
         <div className="px-8 pt-8 pb-4 text-center border-b border-border">
-          <h1 className="text-3xl font-serif font-bold text-amber-500 mb-1">Midnight Gin</h1>
+          <h1 className="text-3xl font-serif font-bold text-amber-500 mb-1">Gin Rummy</h1>
           <p className="text-sm text-muted-foreground">A private table for Noah &amp; Amelia</p>
         </div>
 
