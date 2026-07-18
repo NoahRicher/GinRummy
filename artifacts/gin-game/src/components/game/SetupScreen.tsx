@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SessionState, RANKS, PlayerName, createDeck, sortHand, Card as CardType } from '@/lib/engine';
+import { SessionState, PlayerName, getInitialSession } from '@/lib/engine';
 import { createRoom, getRoom } from '@/lib/roomApi';
 import { motion } from 'framer-motion';
 import { Loader2, Link2, LogIn } from 'lucide-react';
@@ -33,36 +33,9 @@ export function SetupScreen({
 }: SetupScreenProps) {
   const [tab, setTab] = useState<'new' | 'join'>('new');
   const [rounds, setRounds] = useState(session.totalRounds.toString());
-  const [noahWild, setNoahWild] = useState(session.noahWild);
-  const [ameliaWild, setAmeliaWild] = useState(session.ameliaWild);
   const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-
-  const buildDealtSession = (): Partial<SessionState> => {
-    const deck = createDeck();
-    const noahHand = sortHand(deck.splice(0, 7), noahWild);
-    const ameliaHand = sortHand(deck.splice(0, 7), ameliaWild);
-    const discardPile = [deck.pop() as CardType];
-    return {
-      totalRounds: parseInt(rounds, 10),
-      noahWild,
-      ameliaWild,
-      deck,
-      noahHand,
-      ameliaHand,
-      discardPile,
-      status: 'active',
-      turn: 'Noah',
-      hasDrawn: false,
-      currentRound: 1,
-      noahScore: 0,
-      ameliaScore: 0,
-      log: ['Match started. Noah goes first.'],
-      roundWinner: '',
-      loserMeldIndices: [],
-    };
-  };
 
   const handleCreateRoom = async () => {
     if (!localIdentity) {
@@ -71,12 +44,22 @@ export function SetupScreen({
     }
     setLoading(true);
     try {
-      const dealt = buildDealtSession();
-      const fullSession = { ...session, ...dealt } as SessionState;
-      const code = await createRoom(fullSession);
+      // Start in wildpick phase — Noah picks wild first round 1
+      const initial = getInitialSession();
+      const newSession: SessionState = {
+        ...initial,
+        totalRounds: parseInt(rounds, 10),
+        wildPickerThisRound: 'Noah',
+        status: 'wildpick',
+      };
+      const code = await createRoom(newSession);
       setRoomCode(code);
-      onDeal(dealt);
-      toast({ title: `Room created! Code: ${code}`, description: 'Share this code with Amelia/Noah.' });
+      onDeal({
+        totalRounds: parseInt(rounds, 10),
+        wildPickerThisRound: 'Noah',
+        status: 'wildpick',
+      });
+      toast({ title: `Room created! Code: ${code}`, description: 'Share this code with your opponent.' });
     } catch {
       toast({ title: 'Failed to create room', description: 'Check your connection and try again.', variant: 'destructive' });
     } finally {
@@ -167,12 +150,7 @@ export function SetupScreen({
           </div>
 
           {tab === 'new' && (
-            <motion.div
-              key="new"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-5"
-            >
+            <motion.div key="new" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
               <div className="space-y-2">
                 <Label>Match Length</Label>
                 <Select value={rounds} onValueChange={setRounds}>
@@ -189,45 +167,21 @@ export function SetupScreen({
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Noah's Wild</Label>
-                  <Select value={noahWild} onValueChange={setNoahWild}>
-                    <SelectTrigger className="border-amber-500/40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {RANKS.map((r) => (
-                        <SelectItem key={`n-${r}`} value={r}>{r}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Amelia's Wild</Label>
-                  <Select value={ameliaWild} onValueChange={setAmeliaWild}>
-                    <SelectTrigger className="border-amber-500/40">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {RANKS.map((r) => (
-                        <SelectItem key={`a-${r}`} value={r}>{r}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="bg-secondary/30 rounded-xl p-4 border border-border text-sm text-muted-foreground space-y-1">
+                <p className="text-foreground font-semibold text-sm">How wilds work</p>
+                <p>Before each round one player picks any rank as the wild. Wild cards act as jokers — they fill any spot in any meld.</p>
+                <p className="mt-1">Noah picks first (Round 1), then you alternate.</p>
               </div>
 
               <Button
                 className="w-full py-6 text-base font-semibold shadow-lg shadow-primary/20"
                 onClick={handleCreateRoom}
                 disabled={loading || !localIdentity}
-                data-testid="button-create-room"
               >
                 {loading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating Room...</>
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating Room…</>
                 ) : (
-                  <><Link2 className="w-4 h-4 mr-2" /> Create Room &amp; Deal</>
+                  <><Link2 className="w-4 h-4 mr-2" /> Create Room</>
                 )}
               </Button>
               <p className="text-xs text-center text-muted-foreground">
@@ -237,12 +191,7 @@ export function SetupScreen({
           )}
 
           {tab === 'join' && (
-            <motion.div
-              key="join"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-5"
-            >
+            <motion.div key="join" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
               <div className="space-y-2">
                 <Label>Room Code</Label>
                 <Input
@@ -251,7 +200,6 @@ export function SetupScreen({
                   onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                   maxLength={4}
                   className="text-center text-2xl font-mono tracking-[0.4em] uppercase h-14 border-primary/40 focus-visible:ring-primary/50"
-                  data-testid="input-room-code"
                 />
               </div>
 
@@ -259,16 +207,15 @@ export function SetupScreen({
                 className="w-full py-6 text-base font-semibold"
                 onClick={handleJoinRoom}
                 disabled={loading || !localIdentity || joinCode.trim().length < 4}
-                data-testid="button-join-room"
               >
                 {loading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Joining...</>
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Joining…</>
                 ) : (
                   <><LogIn className="w-4 h-4 mr-2" /> Join Room</>
                 )}
               </Button>
               <p className="text-xs text-center text-muted-foreground">
-                Ask your opponent for the 4-letter code they got when they created the match.
+                Ask your opponent for the 4-letter code.
               </p>
             </motion.div>
           )}

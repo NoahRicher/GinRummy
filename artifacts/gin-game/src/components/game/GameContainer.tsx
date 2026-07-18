@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SetupScreen } from '@/components/game/SetupScreen';
+import { WildPickScreen } from '@/components/game/WildPickScreen';
 import { GameScreen } from '@/components/game/GameScreen';
 import { ScoringScreen } from '@/components/game/ScoringScreen';
 import { GameOverScreen } from '@/components/game/GameOverScreen';
-import { SessionState, PlayerName, getInitialSession } from '@/lib/engine';
+import { SessionState, PlayerName, Card, getInitialSession } from '@/lib/engine';
 import { Toaster } from '@/components/ui/toaster';
-import { useToast } from '@/hooks/use-toast';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getRoom, pushRoom } from '@/lib/roomApi';
@@ -19,28 +19,23 @@ export function GameContainer() {
   const [localIdentity, setLocalIdentity] = useState<PlayerName | null>(null);
   const [roomCode, setRoomCode] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const { toast } = useToast();
 
-  // Refs for use in effects/callbacks without stale closures
   const roomCodeRef = useRef<string | null>(null);
-  const sessionRef = useRef<SessionState>(session);
   const lastUpdatedAtRef = useRef<string | null>(null);
 
   useEffect(() => { roomCodeRef.current = roomCode; }, [roomCode]);
-  useEffect(() => { sessionRef.current = session; }, [session]);
 
   // Load persisted state on mount
   useEffect(() => {
     const savedIdentity = localStorage.getItem(IDENTITY_KEY);
     if (savedIdentity === 'Noah' || savedIdentity === 'Amelia') {
-      setLocalIdentity(savedIdentity);
+      setLocalIdentity(savedIdentity as PlayerName);
     }
 
     const savedCode = localStorage.getItem(ROOM_CODE_KEY);
     if (savedCode) {
       setRoomCode(savedCode);
       roomCodeRef.current = savedCode;
-      // Try to hydrate from server
       getRoom(savedCode)
         .then(({ session: serverSession, updatedAt }) => {
           if (typeof serverSession.noahScore === 'number') {
@@ -49,43 +44,30 @@ export function GameContainer() {
           }
         })
         .catch(() => {
-          // Server unavailable or room expired — fall back to local storage
-          const savedSession = localStorage.getItem(SESSION_KEY);
-          if (savedSession) {
-            try {
-              const parsed = JSON.parse(savedSession) as SessionState;
-              if (typeof parsed.noahScore === 'number') setSession(parsed);
-            } catch { /* ignore */ }
-          }
+          const saved = localStorage.getItem(SESSION_KEY);
+          if (saved) { try { setSession(JSON.parse(saved)); } catch { /* ignore */ } }
         });
     } else {
-      const savedSession = localStorage.getItem(SESSION_KEY);
-      if (savedSession) {
-        try {
-          const parsed = JSON.parse(savedSession) as SessionState;
-          if (typeof parsed.noahScore === 'number') setSession(parsed);
-        } catch { /* ignore */ }
-      }
+      const saved = localStorage.getItem(SESSION_KEY);
+      if (saved) { try { const p = JSON.parse(saved); if (typeof p.noahScore === 'number') setSession(p); } catch { /* ignore */ } }
     }
     setIsLoaded(true);
   }, []);
 
-  // Persist session locally whenever it changes
+  // Persist locally
   useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-    }
+    if (isLoaded) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   }, [session, isLoaded]);
 
-  // Polling — only when it's NOT my turn (opponent is acting)
+  // Poll when it's NOT my turn
   useEffect(() => {
     if (!roomCode || !localIdentity || !isLoaded) return;
     const s = session;
 
-    // Conditions where I am the active party — don't poll, I push
     const iAmActing =
       (s.status === 'active' && s.turn === localIdentity) ||
-      (s.status === 'scoring' && s.roundWinner !== localIdentity); // loser acts during scoring
+      (s.status === 'scoring' && s.roundWinner !== localIdentity) ||
+      (s.status === 'wildpick' && s.wildPickerThisRound === localIdentity);
     const isTerminal = s.status === 'setup' || s.status === 'gameover';
 
     if (iAmActing || isTerminal) return;
@@ -97,13 +79,11 @@ export function GameContainer() {
           lastUpdatedAtRef.current = updatedAt;
           setSession(serverSession);
         }
-      } catch {
-        // Silently ignore poll failures
-      }
+      } catch { /* ignore poll failures */ }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [roomCode, localIdentity, session.status, session.turn, isLoaded]);
+  }, [roomCode, localIdentity, session.status, session.turn, session.wildPickerThisRound, isLoaded]);
 
   const handleIdentityChange = (name: PlayerName) => {
     setLocalIdentity(name);
@@ -117,19 +97,28 @@ export function GameContainer() {
     else localStorage.removeItem(ROOM_CODE_KEY);
   };
 
-  // Update session and push to server if in a room
+  /** Update session and push to server */
   const updateSession = (updates: Partial<SessionState>) => {
     setSession(prev => {
       const next = { ...prev, ...updates };
-      if (roomCodeRef.current) {
-        pushRoom(roomCodeRef.current, next).catch(() => {});
-      }
+      if (roomCodeRef.current) pushRoom(roomCodeRef.current, next).catch(() => {});
       return next;
     });
   };
 
+  /**
+   * Reorder a player's hand locally only — cosmetic, no server push.
+   * We don't want the opponent's push to race with active gameplay.
+   */
+  const reorderHand = (player: PlayerName, newHand: Card[]) => {
+    setSession(prev => ({
+      ...prev,
+      [player === 'Noah' ? 'noahHand' : 'ameliaHand']: newHand,
+    }));
+  };
+
   const handleWipe = () => {
-    if (confirm('Are you sure you want to reset the game?')) {
+    if (confirm('Reset the entire game?')) {
       handleSetRoomCode(null);
       lastUpdatedAtRef.current = null;
       setSession(getInitialSession());
@@ -153,11 +142,21 @@ export function GameContainer() {
         />
       )}
 
+      {session.status === 'wildpick' && localIdentity && (
+        <WildPickScreen
+          session={session}
+          localIdentity={localIdentity}
+          onAction={updateSession}
+          roomCode={roomCode}
+        />
+      )}
+
       {session.status === 'active' && localIdentity && (
         <GameScreen
           session={session}
           localIdentity={localIdentity}
           onAction={updateSession}
+          onReorder={reorderHand}
           roomCode={roomCode}
         />
       )}
@@ -185,7 +184,7 @@ export function GameContainer() {
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-2 right-2 opacity-20 hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground transition-opacity"
+          className="fixed top-2 right-2 opacity-20 hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground transition-opacity z-50"
           onClick={handleWipe}
           title="Reset Game"
         >
