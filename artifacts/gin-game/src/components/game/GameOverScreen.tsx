@@ -30,7 +30,7 @@ export function GameOverScreen({ session, onReset }: GameOverScreenProps) {
             animate={{ scale: 1, y: 0, opacity: 1 }}
             className="space-y-2"
           >
-            <h2 className="text-6xl font-serif font-bold text-primary drop-shadow-[0_0_25px_rgba(59,130,246,0.5)]">
+            <h2 className="text-6xl font-serif font-bold text-primary drop-shadow-[0_0_25px_rgba(200,16,46,0.45)]">
               {winnerName} Wins!
             </h2>
             <p className="text-xl text-muted-foreground">Lowest score takes the crown.</p>

@@ -48,7 +48,7 @@ export function ScoringScreen({ session, localIdentity, onAction }: ScoringScree
         noahHand: [],
         ameliaHand: [],
         discardPile: [],
-        turn: 'Noah',
+        turn: nextPicker,
         hasDrawn: false,
         status: 'wildpick',
         log: [`Round ${session.currentRound + 1}: ${nextPicker} picks the wild.`, ...session.log].slice(0, 50),
@@ -62,7 +62,7 @@ export function ScoringScreen({ session, localIdentity, onAction }: ScoringScree
       <div className="text-center space-y-2">
         <motion.h1
           initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-          className="text-3xl md:text-4xl font-serif font-bold text-amber-500 drop-shadow-[0_0_15px_rgba(245,158,11,0.4)]"
+          className="text-3xl md:text-4xl font-serif font-bold text-red-400 drop-shadow-[0_0_15px_rgba(200,16,46,0.45)]"
         >
           {session.roundWinner} declared GIN!
         </motion.h1>
@@ -70,7 +70,7 @@ export function ScoringScreen({ session, localIdentity, onAction }: ScoringScree
           {session.roundWinner} gets 0 points this round.
         </p>
         <p className="text-xs text-muted-foreground">
-          Wild this round: <strong className="text-amber-400">{session.currentWild}s</strong>
+          Wild this round: <strong className="text-red-400">{session.currentWild}s</strong>
         </p>
       </div>
 

@@ -29,10 +29,10 @@ export function WildPickScreen({ session, localIdentity, onAction, roomCode }: W
       ameliaHand,
       discardPile,
       status: 'active',
-      turn: 'Noah',
+      turn: session.wildPickerThisRound,
       hasDrawn: false,
       log: [
-        `${localIdentity} chose ${rank}s as wild. Cards dealt. Noah goes first.`,
+        `${localIdentity} chose ${rank}s as wild. Cards dealt. ${session.wildPickerThisRound} goes first.`,
         ...session.log,
       ].slice(0, 50),
     });
@@ -51,7 +51,7 @@ export function WildPickScreen({ session, localIdentity, onAction, roomCode }: W
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
               Round {session.currentRound} of {session.totalRounds}
             </p>
-            <h2 className="text-xl font-serif font-bold text-amber-500 mt-0.5">Pick the Wild</h2>
+            <h2 className="text-xl font-serif font-bold text-red-400 mt-0.5">Pick the Wild</h2>
           </div>
           <div className="flex items-center gap-2 text-sm">
             {roomCode && (
@@ -82,7 +82,7 @@ export function WildPickScreen({ session, localIdentity, onAction, roomCode }: W
                     key={rank}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => handlePickWild(rank)}
-                    className="relative h-16 rounded-xl border-2 border-border bg-secondary/40 hover:border-amber-500 hover:bg-amber-500/10 hover:text-amber-400 transition-colors font-bold text-lg flex items-center justify-center"
+                    className="relative h-16 rounded-xl border-2 border-border bg-secondary/40 hover:border-red-500 hover:bg-red-600/15 hover:text-red-400 transition-colors font-bold text-lg flex items-center justify-center"
                   >
                     {rank}
                   </motion.button>
@@ -97,7 +97,7 @@ export function WildPickScreen({ session, localIdentity, onAction, roomCode }: W
             <div className="py-8 flex flex-col items-center gap-4 text-center">
               <RefreshCw className="w-8 h-8 text-muted-foreground animate-spin opacity-50" />
               <p className="text-base font-semibold">
-                Waiting for <span className="text-amber-400">{session.wildPickerThisRound}</span> to pick the wild…
+                Waiting for <span className="text-red-400">{session.wildPickerThisRound}</span> to pick the wild…
               </p>
               {roomCode ? (
                 <p className="text-xs text-muted-foreground">Your screen will update automatically.</p>

@@ -101,7 +101,7 @@ export function SetupScreen({
       >
         {/* Header */}
         <div className="px-8 pt-8 pb-4 text-center border-b border-border">
-          <h1 className="text-3xl font-serif font-bold text-amber-500 mb-1">Gin Rummy</h1>
+          <h1 className="text-3xl font-serif font-bold text-red-400 mb-1">☕ Gin Rummy</h1>
           <p className="text-sm text-muted-foreground">A private table for Noah &amp; Amelia</p>
         </div>
 
@@ -120,7 +120,7 @@ export function SetupScreen({
                   htmlFor={`id-${name}`}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-colors ${
                     localIdentity === name
-                      ? 'border-amber-500 bg-amber-500/10 text-amber-400'
+                      ? 'border-red-500 bg-red-600/15 text-red-400'
                       : 'border-border bg-secondary/40 hover:bg-secondary/70'
                   }`}
                 >

@@ -29,7 +29,7 @@ export function Card({
         whileTap={onClick ? { scale: 0.95 } : undefined}
         onClick={onClick}
         className={cn(
-          "relative w-16 h-24 sm:w-20 sm:h-28 rounded-md shadow-md border-2 border-slate-700 bg-[repeating-linear-gradient(45deg,#1e293b,#1e293b_10px,#0f172a_10px,#0f172a_20px)] cursor-pointer flex-shrink-0 transition-shadow",
+          "relative w-16 h-24 sm:w-20 sm:h-28 rounded-md shadow-md border-2 border-red-900 bg-[repeating-linear-gradient(45deg,#6B0011,#6B0011_10px,#4A000C_10px,#4A000C_20px)] cursor-pointer flex-shrink-0 transition-shadow",
           className
         )}
       />
@@ -42,7 +42,7 @@ export function Card({
       animate={{
         y: isSelected ? -15 : 0,
         boxShadow: isWild 
-          ? '0 0 12px 2px rgba(241, 196, 15, 0.7)' 
+          ? '0 0 12px 2px rgba(200, 16, 46, 0.75)' 
           : isMelded 
             ? '0 0 12px 2px rgba(46, 204, 113, 0.7)' 
             : '0 4px 6px -1px rgba(0, 0, 0, 0.3)',
@@ -53,7 +53,7 @@ export function Card({
       className={cn(
         "relative w-16 h-24 sm:w-20 sm:h-28 rounded-md bg-white text-black shadow-md flex-shrink-0 select-none flex flex-col justify-between p-1 sm:p-2 cursor-pointer transition-colors border-2",
         card.isRed ? "text-red-600" : "text-slate-900",
-        isWild ? "border-amber-400" : isMelded ? "border-green-500" : isSelected ? "border-blue-500" : "border-slate-200",
+        isWild ? "border-red-500" : isMelded ? "border-green-500" : isSelected ? "border-primary" : "border-slate-200",
         className
       )}
     >

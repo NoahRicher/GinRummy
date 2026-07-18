@@ -144,7 +144,7 @@ export function GameScreen({ session, localIdentity, onAction, onReorder, roomCo
       {/* Header */}
       <header className="flex items-start justify-between mb-4 shrink-0">
         <div>
-          <h2 className="text-lg font-serif font-bold text-amber-500">
+          <h2 className="text-lg font-serif font-bold text-red-400">
             Round {session.currentRound}
             <span className="text-muted-foreground text-sm font-sans font-normal"> / {session.totalRounds}</span>
           </h2>
@@ -152,8 +152,8 @@ export function GameScreen({ session, localIdentity, onAction, onReorder, roomCo
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Wild</span>
             {/* Mini card badge */}
             <div
-              className="relative w-7 h-9 rounded bg-white text-black flex flex-col justify-between p-0.5 border-2 border-amber-400 flex-shrink-0 select-none"
-              style={{ boxShadow: '0 0 8px 1px rgba(241,196,15,0.65)' }}
+              className="relative w-7 h-9 rounded bg-white text-black flex flex-col justify-between p-0.5 border-2 border-red-500 flex-shrink-0 select-none"
+              style={{ boxShadow: '0 0 8px 1px rgba(200,16,46,0.7)' }}
             >
               <span className="text-[10px] font-bold leading-none text-slate-900">{wild}</span>
               <span className="text-base self-end leading-none">★</span>
@@ -186,7 +186,7 @@ export function GameScreen({ session, localIdentity, onAction, onReorder, roomCo
         <AnimatePresence mode="wait">
           {isMyTurn ? (
             <motion.div key="my" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-              className="bg-primary/20 text-primary border border-primary/50 px-6 py-2 rounded-full font-bold shadow-[0_0_15px_rgba(59,130,246,0.25)]">
+              className="bg-primary/20 text-primary border border-primary/50 px-6 py-2 rounded-full font-bold shadow-[0_0_15px_rgba(200,16,46,0.3)]">
               YOUR TURN
             </motion.div>
           ) : (
@@ -209,7 +209,7 @@ export function GameScreen({ session, localIdentity, onAction, onReorder, roomCo
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             onClick={handleGin}
-            className="mb-4 w-full py-4 rounded-xl font-bold text-lg bg-amber-500/20 border-2 border-amber-500 text-amber-400 shadow-[0_0_24px_rgba(245,158,11,0.35)] animate-pulse hover:bg-amber-500/30 transition-colors shrink-0"
+            className="mb-4 w-full py-4 rounded-xl font-bold text-lg bg-red-600/20 border-2 border-red-500 text-red-400 shadow-[0_0_24px_rgba(200,16,46,0.4)] animate-pulse hover:bg-red-600/30 transition-colors shrink-0"
           >
             ✨ All cards melded — Declare GIN! ✨
           </motion.button>
@@ -254,7 +254,7 @@ export function GameScreen({ session, localIdentity, onAction, onReorder, roomCo
             className={cn(
               'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors',
               arrangeMode
-                ? 'border-amber-500 bg-amber-500/15 text-amber-400'
+                ? 'border-red-500 bg-red-600/15 text-red-400'
                 : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
             )}
           >
@@ -287,8 +287,8 @@ export function GameScreen({ session, localIdentity, onAction, onReorder, roomCo
                     onClick={() => handleCardTap(idx)}
                     className={cn(
                       'cursor-pointer',
-                      isArrangeSelected && 'ring-2 ring-amber-400 ring-offset-2 ring-offset-background scale-105 shadow-[0_0_14px_rgba(251,191,36,0.5)]',
-                      arrangeMode && !isArrangeSelected && 'hover:ring-1 hover:ring-amber-400/50',
+                      isArrangeSelected && 'ring-2 ring-red-500 ring-offset-2 ring-offset-background scale-105 shadow-[0_0_14px_rgba(200,16,46,0.45)]',
+                      arrangeMode && !isArrangeSelected && 'hover:ring-1 hover:ring-red-500/50',
                     )}
                   />
                 </motion.div>
