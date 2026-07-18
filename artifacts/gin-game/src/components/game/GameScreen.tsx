@@ -148,8 +148,16 @@ export function GameScreen({ session, localIdentity, onAction, onReorder, roomCo
             Round {session.currentRound}
             <span className="text-muted-foreground text-sm font-sans font-normal"> / {session.totalRounds}</span>
           </h2>
-          <div className="text-xs text-muted-foreground mt-0.5">
-            Wild this round: <strong className="text-amber-400">{wild}s</strong>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Wild</span>
+            {/* Mini card badge */}
+            <div
+              className="relative w-7 h-9 rounded bg-white text-black flex flex-col justify-between p-0.5 border-2 border-amber-400 flex-shrink-0 select-none"
+              style={{ boxShadow: '0 0 8px 1px rgba(241,196,15,0.65)' }}
+            >
+              <span className="text-[10px] font-bold leading-none text-slate-900">{wild}</span>
+              <span className="text-base self-end leading-none">★</span>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
