@@ -31,7 +31,6 @@ export interface SessionState {
   status: GameStatus;
   log: string[];
   roundWinner: PlayerName | '';
-  loserMeldIndices: number[];
 }
 
 export const getRankValue = (rank: string) => {
@@ -176,5 +175,4 @@ export const getInitialSession = (): SessionState => ({
   status: 'setup',
   log: [],
   roundWinner: '',
-  loserMeldIndices: [],
 });

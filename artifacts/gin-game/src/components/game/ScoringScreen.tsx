@@ -1,9 +1,9 @@
 import React from 'react';
 import { Card } from '@/components/game/Card';
 import { Button } from '@/components/ui/button';
-import { SessionState, PlayerName, getDeadwoodValue } from '@/lib/engine';
+import { SessionState, PlayerName, getDeadwoodValue, evaluateHandForMeldStatus } from '@/lib/engine';
 import { motion } from 'framer-motion';
-import { AlertCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ScoringScreenProps {
   session: SessionState;
@@ -13,19 +13,14 @@ interface ScoringScreenProps {
 
 export function ScoringScreen({ session, localIdentity, onAction }: ScoringScreenProps) {
   const loserName: PlayerName = session.roundWinner === 'Noah' ? 'Amelia' : 'Noah';
-  const isLoser = localIdentity === loserName;
   const loserHand = loserName === 'Noah' ? session.noahHand : session.ameliaHand;
-  const safeIndices = new Set(session.loserMeldIndices);
 
-  const toggleSafe = (index: number) => {
-    if (!isLoser) return;
-    const next = new Set(session.loserMeldIndices);
-    if (next.has(index)) next.delete(index); else next.add(index);
-    onAction({ loserMeldIndices: Array.from(next) });
-  };
+  // Auto-detect which cards are part of a valid meld (3+ set or run, wilds fill gaps)
+  const meldFlags = evaluateHandForMeldStatus(loserHand, session.currentWild);
 
+  // Deadwood = only cards that couldn't be placed in any meld
   const deadwoodPenalty = loserHand.reduce(
-    (total, card, idx) => safeIndices.has(idx) ? total : total + getDeadwoodValue(card.rank),
+    (total, card, idx) => meldFlags[idx] ? total : total + getDeadwoodValue(card.rank),
     0
   );
 
@@ -42,7 +37,6 @@ export function ScoringScreen({ session, localIdentity, onAction }: ScoringScree
         log: ['Match finished!', ...session.log].slice(0, 50),
       });
     } else {
-      // Move to wild-pick phase for next round — opponent of last picker goes next
       const nextPicker: PlayerName = session.wildPickerThisRound === 'Noah' ? 'Amelia' : 'Noah';
       onAction({
         noahScore: newNoahScore,
@@ -57,7 +51,6 @@ export function ScoringScreen({ session, localIdentity, onAction }: ScoringScree
         turn: 'Noah',
         hasDrawn: false,
         status: 'wildpick',
-        loserMeldIndices: [],
         log: [`Round ${session.currentRound + 1}: ${nextPicker} picks the wild.`, ...session.log].slice(0, 50),
       });
     }
@@ -83,47 +76,51 @@ export function ScoringScreen({ session, localIdentity, onAction }: ScoringScree
 
       <div className="bg-card border border-border rounded-2xl p-6 shadow-xl space-y-6">
 
-        {/* Instruction banner */}
-        <div className={cn(
-          'flex items-start gap-3 px-4 py-3 rounded-xl border text-sm',
-          isLoser
-            ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-            : 'bg-muted/50 border-border text-muted-foreground'
-        )}>
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-          <p>
-            {isLoser
-              ? 'Tap your melded cards to protect them. Groups of 3+ (sets or runs) count — wilds fill any spot. Unprotected cards are deadwood.'
-              : `Waiting for ${loserName} to mark their melds. Screen updates automatically.`}
-          </p>
-        </div>
-
-        {/* Loser's hand */}
+        {/* Loser's hand — melds auto-detected */}
         <div>
-          <h3 className="text-base font-bold mb-4">{loserName}'s Hand</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-base font-bold">{loserName}'s Hand</h3>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-green-500/70" /> melded
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-destructive/70" /> deadwood
+              </span>
+            </div>
+          </div>
+
           <div className="flex flex-wrap justify-center gap-3">
             {loserHand.map((card, idx) => (
-              <motion.div key={`${card.rank}${card.suit}${idx}`} whileTap={isLoser ? { scale: 0.93 } : {}}>
+              <div key={`${card.rank}${card.suit}${idx}`} className="relative">
                 <Card
                   card={card}
                   isWild={card.rank === session.currentWild}
-                  isMelded={safeIndices.has(idx)}
-                  onClick={() => toggleSafe(idx)}
-                  className={isLoser ? 'cursor-pointer' : 'cursor-default'}
+                  isMelded={meldFlags[idx]}
+                  className={cn(
+                    !meldFlags[idx] && 'ring-2 ring-destructive/60 ring-offset-1 ring-offset-background'
+                  )}
                 />
-              </motion.div>
+              </div>
             ))}
           </div>
+
+          <p className="text-xs text-center text-muted-foreground mt-3">
+            Melds need 3+ cards (same rank or same-suit run). Wilds fill any gap.
+          </p>
         </div>
 
-        {/* Penalty display */}
+        {/* Score summary */}
         <div className="flex flex-col items-center gap-5 pt-2">
           <div className="text-center bg-black/30 px-10 py-4 rounded-2xl border border-border w-full">
             <span className="text-muted-foreground uppercase tracking-widest text-xs block mb-1">
               {loserName}'s Deadwood Penalty
             </span>
-            <motion.span key={deadwoodPenalty} initial={{ scale: 1.2 }} animate={{ scale: 1 }}
-              className="text-5xl font-mono font-bold text-destructive">
+            <motion.span
+              key={deadwoodPenalty}
+              initial={{ scale: 1.2 }} animate={{ scale: 1 }}
+              className="text-5xl font-mono font-bold text-destructive"
+            >
               +{deadwoodPenalty}
             </motion.span>
             <p className="text-xs text-muted-foreground mt-1.5">A=15 · Face=10 · Number=5</p>
@@ -132,11 +129,15 @@ export function ScoringScreen({ session, localIdentity, onAction }: ScoringScree
           <div className="w-full grid grid-cols-2 gap-4 text-center border-t border-border pt-4">
             <div>
               <div className="text-sm text-muted-foreground">Noah</div>
-              <div className="text-2xl font-bold">{session.noahScore + (loserName === 'Noah' ? deadwoodPenalty : 0)}</div>
+              <div className="text-2xl font-bold">
+                {session.noahScore + (loserName === 'Noah' ? deadwoodPenalty : 0)}
+              </div>
             </div>
             <div>
               <div className="text-sm text-muted-foreground">Amelia</div>
-              <div className="text-2xl font-bold">{session.ameliaScore + (loserName === 'Amelia' ? deadwoodPenalty : 0)}</div>
+              <div className="text-2xl font-bold">
+                {session.ameliaScore + (loserName === 'Amelia' ? deadwoodPenalty : 0)}
+              </div>
             </div>
           </div>
 
@@ -147,8 +148,4 @@ export function ScoringScreen({ session, localIdentity, onAction }: ScoringScree
       </div>
     </div>
   );
-}
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
 }

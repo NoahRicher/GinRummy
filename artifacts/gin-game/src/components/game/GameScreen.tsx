@@ -33,10 +33,14 @@ export function GameScreen({ session, localIdentity, onAction, onReorder, roomCo
     setArrangeSelected(null);
   }, [session.turn, session.hasDrawn]);
 
-  const meldFlags = evaluateHandForMeldStatus(myHand, wild);
+  const rawMeldFlags = evaluateHandForMeldStatus(myHand, wild);
+
+  // Meld highlights only appear AFTER drawing (8-card hand) — helps you pick what to discard.
+  // Before drawing the highlights are hidden; the algorithm still runs silently for the gin check.
+  const meldFlags = session.hasDrawn ? rawMeldFlags : rawMeldFlags.map(() => false);
 
   // Gin: all 7 cards melded before drawing
-  const canGin = isMyTurn && !session.hasDrawn && myHand.length === 7 && meldFlags.every(Boolean);
+  const canGin = isMyTurn && !session.hasDrawn && myHand.length === 7 && rawMeldFlags.every(Boolean);
 
   // ── Arrange mode handlers ──────────────────────────────────────────────────
   const handleArrangeTap = (idx: number) => {
