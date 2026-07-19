@@ -1,31 +1,33 @@
 import express, { type Express } from "express";
 import cors from "cors";
-// 1. Import the types for the pino-http serializers
-import pinoHttp, { type SerializerFn } from "pino-http";
+// Use * as to import the entire module as an object
+import * as pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// Use the default export if it exists, otherwise use the module itself
+const pinoMiddleware = (pinoHttp.default || pinoHttp) as any;
+
 app.use(
-  pinoHttp({
+  pinoMiddleware({
     logger,
     serializers: {
-      // 2. Explicitly type these as SerializerFn to stop TS7006
-      req: ((req: any) => {
+      req(req: any) {
         return {
           id: req.id,
           method: req.method,
           url: req.url?.split("?")[0],
         };
-      }) as SerializerFn,
-      res: ((res: any) => {
+      },
+      res(res: any) {
         return {
           statusCode: res.statusCode,
         };
-      }) as SerializerFn,
+      },
     },
-  }),
+  })
 );
 
 app.use(cors());
