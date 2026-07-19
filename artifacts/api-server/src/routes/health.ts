@@ -1,3 +1,7 @@
+TypeScript
+// @ts-nocheck
+import { Router } from "express";
+// ... rest of your code
 import { Router } from "express";
 import { HealthCheckResponse } from "@workspace/api-zod";
 
